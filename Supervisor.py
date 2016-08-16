@@ -2,21 +2,22 @@ import pickle
 import random
 import argparse
 
+
 def main(popCount = 100, genMax = 1000, checkpoint=None):
     gen = 0
     population = []
     if checkpoint:
         # A file name has been given, then load the data from the file
         try:
-            with open(checkpoint, "r") as cp_file:
+            with open(checkpoint, "r+b") as cp_file:
                 data = pickle.load(cp_file)
-            if data.population:
+            if data["population"]:
                 gen=data["gen"]
                 genMax=data["genMax"]
                 population = data["population"]
             else:
                 population = generate(popCount)
-        except EnvironmentError:
+        except IOError:
             print("Something was wrong with the checkpoint file. Or it doesn't exist. If you expected this, you're fine.")
             population = generate(popCount)
     else:
@@ -31,7 +32,7 @@ def main(popCount = 100, genMax = 1000, checkpoint=None):
             gen += 1
     except (KeyboardInterrupt, SystemExit):
         if checkpoint:
-            with open(checkpoint, "w") as f:
+            with open(checkpoint, "w+b") as f:
                 data = {};
                 data["gen"] = gen
                 data["genMax"] = genMax
@@ -41,7 +42,7 @@ def main(popCount = 100, genMax = 1000, checkpoint=None):
         else:
             checkpoint = input("If you want to save this, input a file name now.")
             if len(checkpoint) > 0:
-                with open(checkpoint, "w") as f:
+                with open(checkpoint, "w+b") as f:
                     data = {};
                     data["gen"] = gen
                     data["genMax"] = genMax
@@ -57,14 +58,21 @@ def generate(popCount):
     return l
 
 def play(p1,p2):
-    print(str(p1) + " and " + str(p2) + " played all night long.")
+    print(str(p1) + " and " + str(p2))
+    total = p1+p2
+    rand = random.random()
+    if(rand < p1/total):
+        p1+=1
+    else:
+        p2+=1
 
 def evalFitness(individual):
-    return individual
+    return -individual
 
 def recombine(population):
-    for x in range(3,8):
-        population[x] = population[x] * 2
+    for x in range(len(population)):
+        if population[x]/10 < random.random():
+            population[x] = random.randint(1,10)
     print("new population " + str(population))
 
 def pairwise(iterable):
