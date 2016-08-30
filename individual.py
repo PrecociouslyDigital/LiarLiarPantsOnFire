@@ -133,6 +133,7 @@ class Individual:
             states["winRatio"] = this.win/(this.win+this.loss)
             states["sneakiness"] = this.sneakyWin/(this.win+this.loss) + this.capturedBad/(4*(this.capturedBad + this.capturedGood))
             states["starting"] = this.starting
+            states["age"] = this.win + this.loss
         except:
             states["sneakiness"] = "You definitely did not run the alg for long enough. Shame. Shaaaame."
         return states

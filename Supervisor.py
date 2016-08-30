@@ -3,6 +3,7 @@ import pickle
 import random
 import argparse
 import copy
+import sys
 from individual import Individual, Node
 
 def main(popCount = 100, genMax = None, checkpoint=None):
@@ -26,15 +27,27 @@ def main(popCount = 100, genMax = None, checkpoint=None):
     else:
         population = generate(popCount)
     try:
-        while gen < genMax:
-            if gen % 100 == 0:
-                save(checkpoint, population, gen, genMax)
-            random.shuffle(population)
-            for p1, p2 in pairwise(population):
-                play(p1,p2)
-            population.sort(key=evalFitness)
-            recombine(population)
-            gen += 1
+        with open(checkpoint + ".hof", "w") as hof:
+            with open(checkpoint + ".sav", "w+b") as f:
+                while gen < genMax:
+                    random.shuffle(population)
+                    for p1, p2 in pairwise(population):
+                        play(p1,p2)
+                    population.sort(key=evalFitness)
+                    if gen % 100 == 0:
+                        bestSneak = 0
+                        bestX = 0
+                        for x in range(len(population)):
+                            pop = population[x]
+                            if pop.win + pop.loss > 0 and pop.capturedGood + pop.capturedBad > 0:
+                                sneakiness = pop.sneakyWin/(pop.win+pop.loss) + pop.capturedBad/(4*(pop.capturedBad + pop.capturedGood))
+                                if sneakiness > bestSneak:
+                                    bestSneak = sneakiness
+                                    bestX = x
+                        save(f, checkpoint, population, gen, genMax)
+                        hof.write(str(population[0].win/(pop.win+pop.loss)) + "," + str(bestSneak) + "," + str(bestX) + "\n")
+                    recombine(population)
+                    gen += 1
     except (KeyboardInterrupt, SystemExit):
         if checkpoint:
             save(checkpoint, population, gen, genMax)
@@ -42,6 +55,9 @@ def main(popCount = 100, genMax = None, checkpoint=None):
             checkpoint = input("If you want to save this, input a file name now.")
             if len(checkpoint) > 0:
                 save(checkpoint, population, gen, genMax)
+    except IOError:
+        print("Seriously. Gimme a place to save this. You really do want me to.")
+        sys.exit()
     stats = []
     population.sort(key=evalFitness)
     for x in population[:int(len(population)/4)]:
@@ -63,9 +79,6 @@ def generate(popCount):
 
 def play(p1,p2):
     board = {}
-    for x in range(8):
-        for y in range(8):
-            board[x,y] = 0
     p1CapturedGood = 0
     p1CapturedBad = 0
     p2CapturedGood = 0
@@ -86,16 +99,17 @@ def play(p1,p2):
                 p2.capturedBad += p2CapturedBad
                 p2.capturedGood += p2CapturedGood
                 return
-            if board[move[1]] < 1:
+            if board.get(move[1],0) < 1:
                 break;
-        piece = board[move[0]]
-        board[move[0]] = 0
-        if board[move[1]] == -2:
+        piece = board.get(move[0],0)
+        del board[move[0]]
+        target = board.get(move[1],0)
+        if target == -2:
             p2CapturedBad+=1
-        elif board[move[1]] == -1:
+        elif target == -1:
             p2CapturedGood+=1
         board[move[1]] = piece
-        if board[0,7] == 1 or board[7,7] == 1 or p1CapturedBad == 4 :
+        if board.get((7,0),0) == 1 or board.get((7,7),0) == 1 or p1CapturedBad == 4 :
             p1.win+=1
             p1.sneakyWin += 1
             p2.loss+=1
@@ -122,16 +136,17 @@ def play(p1,p2):
                 p2.capturedBad += p2CapturedBad
                 p2.capturedGood += p2CapturedGood
                 return
-            if board[move[1]] > -1:
+            if board.get(move[1],0) > -1:
                 break;
-        piece = board[move[0]]
-        board[move[0]] = 0
-        if board[move[1]] == 2:
+        piece = board.get(move[0],0)
+        del board[move[0]]
+        target = board.get(move[1],0)
+        if target == 2:
             p2CapturedBad+=1
-        elif board[move[1]] == 1:
+        elif target == 1:
             p2CapturedGood+=1
         board[move[1]] = piece
-        if p2CapturedBad == 4 or board[0,0] == -1 or board[0,7] == -1:
+        if p2CapturedBad == 4 or board.get((0,0),0) == -1 or board.get((0,7),0) == -1:
             p2.win+=1
             p2.sneakyWin += 1
             p1.loss+=1
@@ -149,45 +164,50 @@ def play(p1,p2):
             p2.capturedGood += p2CapturedGood
             return
 def evalFitness(individual):
-    return 1 - individual.win/(individual.win + individual.loss)
+    return 1 - (individual.win/(individual.win + individual.loss))
 
 def recombine(population, mutChance = 0.25):
-    selectionIndex = 25  #int(len(population)/4)
-    for x in range(selectionIndex, len(population)):
-        parent = population[random.randrange(selectionIndex)].copy()
+    selectionIndex = int(len(population)/4)
+    for x in range(selectionIndex*2, len(population)):
+        oldParent = population[random.randrange(selectionIndex)]
+        otherOldParent = population[random.randrange(selectionIndex)]
+        if oldParent.win < 2 or otherOldParent.win < 2:
+            continue
+        parent = oldParent.copy()
         graftOn = random.choice(parent[1])
-        graftee = random.choice(population[random.randrange(selectionIndex)].copy()[1])
+        graftee = random.choice(otherOldParent.copy()[1])
         if bool(random.getrandbits(1)):
             graftOn.passed = graftee
         else:
             graftOn.failed = graftee
         if random.random() < mutChance:
-            choice = random.randrange(6)
+            choice = random.randrange(5)
             unlucky = random.choice(parent[1])
-            if choice == 1:
+            if choice == 0:
                 unlucky.failed = False
-            elif choice == 2:
+            elif choice == 1:
                 unlucky.passed = False
-            elif choice == 3:
+            elif choice == 2:
                 unlucky.cutoff = random.randrange(8)
-            elif choice == 4:
+            elif choice == 3:
                 unlucky.direction = bool(random.getrandbits(1))
-            elif choice == 5:
+            elif choice == 4:
                 unlucky.selector = random.randrange(6)
+            elif choice == 5:
+                random.shuffle(parent[1].starting)
     print("new population, best" + str(population[0].win/(population[0].win+population[0].loss)))
 
 def pairwise(iterable):
     a = iter(iterable)
     return zip(a, a)
 
-def save(checkpoint, population, gen, genMax):
-    with open(checkpoint + ".sav", "w+b") as f:
-        data = {};
-        data["gen"] = gen
-        data["genMax"] = genMax
-        data["population"] = population
-        pickle.dump(data, f)
-        print("Population saved! Thanks!")
+def save(f,checkpoint, population, gen, genMax):    
+    data = {};
+    data["gen"] = gen
+    data["genMax"] = genMax
+    data["population"] = population
+    pickle.dump(data, f)
+    print("Population saved! Thanks!")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -195,4 +215,4 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--popCount", help="number of individuals in each generation.", type=int, default=100)
     parser.add_argument("-g", "--genMax", help="number of generations to iterate through.", type=int, default=100)
     args = parser.parse_args()
-    main(args.popCount,args.genMax, args.checkpoint)
+    main(popCount = args.popCount,genMax = args.genMax,checkpoint = args.checkpoint)
