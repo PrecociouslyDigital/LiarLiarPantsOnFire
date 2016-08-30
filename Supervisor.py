@@ -10,14 +10,12 @@ def main(popCount = 100, genMax = None, checkpoint=None):
     gen = 0
     population = []
     if checkpoint:
-        # A file name has been given, then load the data from the file
         try:
-            with open(checkpoint, "r+b") as cp_file:
+            with open(checkpoint + ".sav", "r+b") as cp_file:
                 data = pickle.load(cp_file)
             if data["population"]:
                 gen=data["gen"]
-                if not genMax:
-                    genMax=data["genMax"]
+                genMax=data.get("genMax", genMax)
                 population = data["population"]
             else:
                 population = generate(popCount)
@@ -27,27 +25,30 @@ def main(popCount = 100, genMax = None, checkpoint=None):
     else:
         population = generate(popCount)
     try:
-        with open(checkpoint + ".hof", "w") as hof:
-            with open(checkpoint + ".sav", "w+b") as f:
-                while gen < genMax:
-                    random.shuffle(population)
-                    for p1, p2 in pairwise(population):
-                        play(p1,p2)
-                    population.sort(key=evalFitness)
-                    if gen % 100 == 0:
-                        bestSneak = 0
-                        bestX = 0
-                        for x in range(len(population)):
-                            pop = population[x]
-                            if pop.win + pop.loss > 0 and pop.capturedGood + pop.capturedBad > 0:
-                                sneakiness = pop.sneakyWin/(pop.win+pop.loss) + pop.capturedBad/(4*(pop.capturedBad + pop.capturedGood))
-                                if sneakiness > bestSneak:
-                                    bestSneak = sneakiness
-                                    bestX = x
-                        save(f, checkpoint, population, gen, genMax)
-                        hof.write(str(population[0].win/(pop.win+pop.loss)) + "," + str(bestSneak) + "," + str(bestX) + "\n")
-                    recombine(population)
-                    gen += 1
+        with open(checkpoint + ".hof", "a") as hof:
+            while gen < genMax:
+                random.shuffle(population)
+                for p1, p2 in pairwise(population):
+                    play(p1,p2)
+                population.sort(key=evalFitness)
+                if gen % 100 == 0:
+                    bestSneak = 0
+                    bestX = 0
+                    for x in range(len(population)):
+                        pop = population[x]
+                        if pop.win + pop.loss > 0 and pop.capturedGood + pop.capturedBad > 0:
+                            sneakiness = pop.sneakyWin/(pop.win+pop.loss) + pop.capturedBad/(4*(pop.capturedBad + pop.capturedGood))
+                            if sneakiness > bestSneak:
+                                bestSneak = sneakiness
+                                bestX = x
+                    save(checkpoint, population, gen, genMax)
+                    best = str(population[0].win/(pop.win+pop.loss))
+                    bestSneak = str(bestSneak) 
+                    bestX = str(bestX)
+                    hof.write(best + "," + bestSneak + "," + str(bestX) + "\n")
+                    print("new population, gen: " + str(gen) + "/" + str(genMax) +", best: " + best + ", sneak: " + bestSneak + " at " + bestX)
+                recombine(population)
+                gen += 1
     except (KeyboardInterrupt, SystemExit):
         if checkpoint:
             save(checkpoint, population, gen, genMax)
@@ -65,8 +66,8 @@ def main(popCount = 100, genMax = None, checkpoint=None):
     if checkpoint:
         with open(checkpoint + ".res", "w") as f:
             json.dump(stats, f, indent=4, sort_keys=True)
+    print("Done!")
 def generate(popCount):
-    print("generated popcount things");
     l = []
     starting = [0,0,0,0,1,1,1,1]
     for x in range(popCount):
@@ -195,19 +196,19 @@ def recombine(population, mutChance = 0.25):
                 unlucky.selector = random.randrange(6)
             elif choice == 5:
                 random.shuffle(parent[1].starting)
-    print("new population, best" + str(population[0].win/(population[0].win+population[0].loss)))
 
 def pairwise(iterable):
     a = iter(iterable)
     return zip(a, a)
 
-def save(f,checkpoint, population, gen, genMax):    
-    data = {};
-    data["gen"] = gen
-    data["genMax"] = genMax
-    data["population"] = population
-    pickle.dump(data, f)
-    print("Population saved! Thanks!")
+def save(checkpoint, population, gen, genMax):    
+    with open(checkpoint + ".sav", "w+b") as f:
+        data = {};
+        data["gen"] = gen
+        data["genMax"] = genMax
+        data["population"] = population
+        pickle.dump(data, f)
+        print("Population saved! Thanks!")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
