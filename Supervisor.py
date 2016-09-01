@@ -59,6 +59,7 @@ def main(popCount = 100, genMax = None, checkpoint=None):
     except IOError:
         print("Seriously. Gimme a place to save this. You really do want me to.")
         sys.exit()
+    save()
     stats = []
     population.sort(key=evalFitness)
     for x in population[:int(len(population)/4)]:

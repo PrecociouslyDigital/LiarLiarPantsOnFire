@@ -128,14 +128,17 @@ class Individual:
         result = Individual(nodes[-1], this.starting)
         return (result, nodes)
     def stats(this):
-        states = {}
+        states = dict(this.__dict__)
         try:
             states["winRatio"] = this.win/(this.win+this.loss)
-            states["sneakiness"] = this.sneakyWin/(this.win+this.loss) + this.capturedBad/(4*(this.capturedBad + this.capturedGood))
             states["starting"] = this.starting
             states["age"] = this.win + this.loss
-        except:
-            states["sneakiness"] = "You definitely did not run the alg for long enough. Shame. Shaaaame."
+            del states["root"]
+            del states["current"]
+            states["sneakiness"] = this.sneakyWin/(this.win+this.loss) 
+            states["sneakiness"] += this.capturedBad/(4*(this.capturedBad + this.capturedGood))
+        except Exception as e:
+            pass
         return states
 
 class Node:
