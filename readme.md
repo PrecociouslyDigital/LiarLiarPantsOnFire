@@ -1,0 +1,8 @@
+# Overview
+This was code written for my Extended Essay, a research project. It's bad code, but it works. 
+# Abstract
+At the forefront of today’s research into artificial intelligence is research into machine learning algorithms. Machine learning algorithms are a set of algorithms that, instead of having an explicit programmer, “learn” and find patterns in data to solve problems. From translation services to preventing financial fraud, they are incredibly useful tools in situations where human-designed approaches have fallen short. However, because of their very nature, for the most part, we are unaware of the reason they are designed the way they are. What guarantee do we have that these algorithms will not deceive us? The implications of such are mind-boggling, so this paper focuses on a simpler question: Can a machine learning algorithm independently develop deceptive behaviors?
+
+To answer this question, a machine learning algorithm is tasked with playing Ghosts, a board game by Milton Bradley that is based around deceiving one’s opponent. The algorithm’s goal was not explicitly to develop deception, but instead simply to be good at playing Ghosts; However, being deceptive is an integral part of the game. The algorithm created many small approaches to playing Ghosts and had them repeatedly compete with each other, and combined the best approaches, using the principles of microevolution to slowly improve at playing Ghosts. 
+
+After the machine learning algorithm ran its course, it was found that the algorithm was not very good at playing Ghosts. However, the approach attempted in this paper was rudimentary and limited, and it does not conclude that technology cannot develop deceptive traits.
